@@ -30,3 +30,4 @@ Boa regra:
 - `api_health.py`: verifica a saude da API publica
 - `catalog_search.py`: busca em um catalogo local versionado
 - `firecrawl_tools.py`: exemplos de scrape e search com Firecrawl
+- `rag_search.py`: busca semantica na base de conhecimento local

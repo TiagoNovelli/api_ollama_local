@@ -1,22 +1,19 @@
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from dotenv import load_dotenv
-import os
 import time
 import requests
 
-load_dotenv()
+from agents.rag_support_agent import run_rag_support_agent
+from config import settings
 
-APP_VERSION = "1.0.0"
-API_TOKEN = os.getenv("API_TOKEN", "")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+
+APP_VERSION = "1.1.0"
 
 app = FastAPI(
     title="API Ollama Local",
     version=APP_VERSION,
-    description="Camada compatível com OpenAI para um servidor Ollama local.",
+    description="Camada compativel com OpenAI para um servidor Ollama local.",
 )
 
 
@@ -36,8 +33,13 @@ class OpenAIChatRequest(BaseModel):
     stream: bool = False
 
 
+class RAGSupportRequest(BaseModel):
+    question: str
+    top_k: int = 4
+
+
 def require_bearer(authorization: str | None) -> None:
-    if authorization != f"Bearer {API_TOKEN}":
+    if authorization != f"Bearer {settings.api_token}":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -67,7 +69,7 @@ def pseudo_tokens_from_messages(messages: list[OpenAIMessage]) -> int:
 
 @app.get("/health")
 def health():
-    return {"ok": True, "version": APP_VERSION, "model": OLLAMA_MODEL}
+    return {"ok": True, "version": APP_VERSION, "model": settings.ollama_model}
 
 
 @app.get("/version")
@@ -82,7 +84,7 @@ def list_models(authorization: str | None = Header(default=None)):
         "object": "list",
         "data": [
             {
-                "id": OLLAMA_MODEL,
+                "id": settings.ollama_model,
                 "object": "model",
                 "created": 0,
                 "owned_by": "ollama",
@@ -95,9 +97,9 @@ def list_models(authorization: str | None = Header(default=None)):
 def chat(body: ChatBody, authorization: str | None = Header(default=None)):
     require_bearer(authorization)
 
-    model = body.model or OLLAMA_MODEL
+    model = body.model or settings.ollama_model
     response = requests.post(
-        f"{OLLAMA_URL}/api/generate",
+        f"{settings.ollama_url}/api/generate",
         json={
             "model": model,
             "prompt": body.prompt,
@@ -119,9 +121,9 @@ def chat_completions(body: OpenAIChatRequest, authorization: str | None = Header
     if not body.messages:
         return openai_error(400, "messages are required", "invalid_request_error")
 
-    model = body.model or OLLAMA_MODEL
+    model = body.model or settings.ollama_model
     response = requests.post(
-        f"{OLLAMA_URL}/api/chat",
+        f"{settings.ollama_url}/api/chat",
         json={
             "model": model,
             "messages": [message.model_dump() for message in body.messages],
@@ -165,4 +167,20 @@ def chat_completions(body: OpenAIChatRequest, authorization: str | None = Header
             "completion_tokens": completion_tokens,
             "total_tokens": prompt_tokens + completion_tokens,
         },
+    }
+
+
+@app.post("/agents/rag-support")
+def rag_support(body: RAGSupportRequest, authorization: str | None = Header(default=None)):
+    require_bearer(authorization)
+    if not body.question.strip():
+        return openai_error(400, "question is required", "invalid_request_error")
+
+    result = run_rag_support_agent(body.question, top_k=max(1, body.top_k))
+    return {
+        "question": body.question,
+        "answer": result["answer"],
+        "sources": result["sources"],
+        "chunks": result["chunks"],
+        "top_k": body.top_k,
     }

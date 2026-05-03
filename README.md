@@ -8,6 +8,7 @@ Este repositorio tambem inclui uma estrutura inicial para:
 - workflows com `LangGraph`
 - skills reutilizaveis
 - scraping e search com `Firecrawl`
+- RAG com `ChromaDB`
 
 ## Versao
 
@@ -22,6 +23,7 @@ Este repositorio tambem inclui uma estrutura inicial para:
 - `POST /v1/chat/completions`
 - exemplos de agentes e skills versionaveis
 - exemplos de workflow com LangGraph
+- endpoint RAG em `/agents/rag-support`
 
 ## Requisitos
 
@@ -85,6 +87,7 @@ Este projeto inclui dependencias para:
 - `langchain-openai`
 - `langgraph`
 - `firecrawl-py`
+- `chromadb`
 
 ## Executando localmente
 
@@ -124,6 +127,7 @@ api_ollama_local/
 - `prompts/`: prompts versionados
 - `data/`: catalogo e fixtures pequenas
 - `examples/`: exemplos rapidos para testar
+- `rag/`: ingestao e recuperacao vetorial
 
 ## Endpoints
 
@@ -199,6 +203,38 @@ curl https://ollama.brainess.com.br/v1/chat/completions \
   }'
 ```
 
+### RAG Support
+
+Antes de usar, faca a ingestao da base:
+
+```bash
+python -m examples.ingest_knowledge
+```
+
+Local:
+
+```bash
+curl http://127.0.0.1:8000/agents/rag-support \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Quais sofas existem no catalogo de exemplo?",
+    "top_k": 3
+  }'
+```
+
+Publico:
+
+```bash
+curl https://ollama.brainess.com.br/agents/rag-support \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Quais sofas existem no catalogo de exemplo?",
+    "top_k": 3
+  }'
+```
+
 ## Uso em Python
 
 ```python
@@ -223,7 +259,9 @@ Rode a partir da raiz do repositorio:
 
 ```bash
 python -m examples.use_openai_sdk
+python -m examples.ingest_knowledge
 python -m agents.support_agent
+python -m agents.rag_support_agent
 python -m workflows.support_graph
 ```
 
@@ -252,8 +290,11 @@ Nao versione:
 - logs
 - bases grandes geradas em runtime
 
+O diretório `vector_store/` fica no `.gitignore` porque e gerado pela ingestao do Chroma.
+
 ## Observacoes
 
 - `stream=true` ainda nao esta implementado.
 - `GET /v1/models` retorna o modelo padrao configurado no `.env`.
 - O token e validado via header `Authorization: Bearer ...`.
+- o RAG usa `EMBEDDING_MODEL` para gerar embeddings via Ollama

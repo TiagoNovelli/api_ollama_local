@@ -21,6 +21,7 @@ Um agente normalmente junta:
 
 - `support_agent.py`: agente focado em suporte e catalogo local
 - `research_agent.py`: agente focado em busca e leitura de paginas com Firecrawl
+- `rag_support_agent.py`: agente de suporte com recuperacao via banco vetorial
 
 ## Quando usar mais de um agente
 
