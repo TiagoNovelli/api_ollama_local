@@ -2,7 +2,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from agents.support_agent import build_support_agent
+from agents.support_agent import run_support_agent as run_support_agent_task
 
 
 class SupportState(TypedDict):
@@ -10,21 +10,13 @@ class SupportState(TypedDict):
     answer: str
 
 
-def run_support_agent(state: SupportState) -> SupportState:
-    agent = build_support_agent()
-    result = agent.invoke(
-        {"messages": [{"role": "user", "content": state["user_input"]}]}
-    )
-    messages = result.get("messages", [])
-    if messages:
-        content = getattr(messages[-1], "content", str(messages[-1]))
-    else:
-        content = str(result)
+def run_support_agent_node(state: SupportState) -> SupportState:
+    content = run_support_agent_task(state["user_input"])
     return {"user_input": state["user_input"], "answer": content}
 
 
 graph = StateGraph(SupportState)
-graph.add_node("support_agent", run_support_agent)
+graph.add_node("support_agent", run_support_agent_node)
 graph.add_edge(START, "support_agent")
 graph.add_edge("support_agent", END)
 support_graph = graph.compile()

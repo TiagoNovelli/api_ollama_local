@@ -3,6 +3,22 @@ import json
 
 
 CATALOG_PATH = Path(__file__).resolve().parent.parent / "data" / "sample_catalog.json"
+STOPWORDS = {
+    "procure",
+    "procurar",
+    "catalogo",
+    "catálogo",
+    "por",
+    "no",
+    "na",
+    "um",
+    "uma",
+    "de",
+    "do",
+    "da",
+    "quero",
+    "buscar",
+}
 
 
 def search_sample_catalog(query: str) -> str:
@@ -10,6 +26,11 @@ def search_sample_catalog(query: str) -> str:
     normalized = query.strip().lower()
     if not normalized:
         return "No query provided."
+
+    tokens = [token.strip(".,;:!?") for token in normalized.split()]
+    keywords = [token for token in tokens if token and token not in STOPWORDS]
+    if not keywords:
+        keywords = [normalized]
 
     items = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     matches = []
@@ -23,7 +44,7 @@ def search_sample_catalog(query: str) -> str:
                 item["color"],
             ]
         ).lower()
-        if normalized in haystack:
+        if any(keyword in haystack for keyword in keywords):
             matches.append(item)
 
     if not matches:
