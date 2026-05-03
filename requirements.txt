@@ -3,3 +3,8 @@ uvicorn[standard]==0.34.2
 requests==2.32.3
 python-dotenv==1.0.1
 pydantic==2.11.4
+openai==1.78.1
+langchain==0.3.25
+langchain-openai==0.3.17
+langgraph==0.4.5
+firecrawl-py==2.6.0

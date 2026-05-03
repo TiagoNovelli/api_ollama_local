@@ -2,6 +2,13 @@
 
 Camada simples em `FastAPI` para expor um servidor `Ollama` local com compatibilidade basica com a API da OpenAI.
 
+Este repositorio tambem inclui uma estrutura inicial para:
+
+- agentes com `LangChain`
+- workflows com `LangGraph`
+- skills reutilizaveis
+- scraping e search com `Firecrawl`
+
 ## Versao
 
 `1.0.0`
@@ -13,11 +20,40 @@ Camada simples em `FastAPI` para expor um servidor `Ollama` local com compatibil
 - `GET /v1/models`
 - `POST /chat`
 - `POST /v1/chat/completions`
+- exemplos de agentes e skills versionaveis
+- exemplos de workflow com LangGraph
 
 ## Requisitos
 
 - Python 3.10+
 - Ollama rodando localmente
+
+## O que sao agentes e skills
+
+### Agentes
+
+Agentes sao componentes que usam um modelo, contexto e ferramentas para decidir o proximo passo.
+
+Exemplos:
+
+- entender uma pergunta
+- decidir se precisa consultar uma ferramenta
+- combinar resposta do modelo com dados externos
+
+### Skills
+
+Skills sao capacidades pequenas e reutilizaveis que um agente pode chamar.
+
+Exemplos:
+
+- verificar a saude da API
+- buscar um item no catalogo
+- raspar uma URL com Firecrawl
+
+Regra pratica:
+
+- agente decide
+- skill executa
 
 ## Instalacao
 
@@ -34,7 +70,21 @@ Edite o `.env`:
 API_TOKEN=troque-este-token
 OLLAMA_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen2.5:3b
+OPENAI_BASE_URL=https://ollama.brainess.com.br/v1
+OPENAI_API_KEY=troque-este-token
+DEFAULT_MODEL=qwen2.5:3b
+FIRECRAWL_API_KEY=
 ```
+
+## Dependencias para agentes
+
+Este projeto inclui dependencias para:
+
+- `openai`
+- `langchain`
+- `langchain-openai`
+- `langgraph`
+- `firecrawl-py`
 
 ## Executando localmente
 
@@ -49,6 +99,31 @@ Se a API estiver publicada pelo seu tunel/proxy, a URL publica usada hoje e:
 ```text
 https://ollama.brainess.com.br
 ```
+
+## Estrutura do projeto
+
+```text
+api_ollama_local/
+  agents/
+  skills/
+  workflows/
+  prompts/
+  data/
+  examples/
+  app.py
+  config.py
+  requirements.txt
+  .env.example
+```
+
+## Diretorios importantes
+
+- `agents/`: agentes prontos e documentados
+- `skills/`: ferramentas reutilizaveis
+- `workflows/`: fluxos com LangGraph
+- `prompts/`: prompts versionados
+- `data/`: catalogo e fixtures pequenas
+- `examples/`: exemplos rapidos para testar
 
 ## Endpoints
 
@@ -124,32 +199,6 @@ curl https://ollama.brainess.com.br/v1/chat/completions \
   }'
 ```
 
-Resposta exemplo:
-
-```json
-{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": 1710000000,
-  "model": "qwen2.5:3b",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Ola! Como posso ajudar voce hoje?"
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 3,
-    "completion_tokens": 6,
-    "total_tokens": 9
-  }
-}
-```
-
 ## Uso em Python
 
 ```python
@@ -167,6 +216,41 @@ response = client.chat.completions.create(
 
 print(response.choices[0].message.content)
 ```
+
+## Exemplos de agentes e workflows
+
+Rode a partir da raiz do repositorio:
+
+```bash
+python -m examples.use_openai_sdk
+python -m agents.support_agent
+python -m workflows.support_graph
+```
+
+Se voce tiver `FIRECRAWL_API_KEY` configurada:
+
+```bash
+python -m agents.research_agent
+```
+
+## Como versionar bem agentes e skills
+
+Versione no Git:
+
+- codigo Python
+- prompts
+- schemas
+- catalogos pequenos
+- exemplos
+- testes
+
+Nao versione:
+
+- `.env`
+- segredos
+- caches
+- logs
+- bases grandes geradas em runtime
 
 ## Observacoes
 

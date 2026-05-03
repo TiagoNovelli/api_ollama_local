@@ -1,0 +1,26 @@
+[
+  {
+    "id": "soh-101",
+    "title": "Sofa Milano 3 lugares",
+    "category": "sofa",
+    "material": "linho",
+    "color": "bege",
+    "price": 18900
+  },
+  {
+    "id": "soh-202",
+    "title": "Sofa Siena modular",
+    "category": "sofa",
+    "material": "boucle",
+    "color": "off white",
+    "price": 26400
+  },
+  {
+    "id": "soh-303",
+    "title": "Mesa Ravena jantar",
+    "category": "mesa",
+    "material": "madeira",
+    "color": "nogueira",
+    "price": 14200
+  }
+]
