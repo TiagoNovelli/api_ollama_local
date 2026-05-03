@@ -12,7 +12,7 @@ Este repositorio tambem inclui uma estrutura inicial para:
 
 ## Versao
 
-`1.0.0`
+`1.1.0`
 
 ## Recursos
 
@@ -21,9 +21,10 @@ Este repositorio tambem inclui uma estrutura inicial para:
 - `GET /v1/models`
 - `POST /chat`
 - `POST /v1/chat/completions`
+- `POST /agents/rag-support`
 - exemplos de agentes e skills versionaveis
 - exemplos de workflow com LangGraph
-- endpoint RAG em `/agents/rag-support`
+- ingestao local de documentos para RAG
 
 ## Requisitos
 
@@ -51,6 +52,7 @@ Exemplos:
 - verificar a saude da API
 - buscar um item no catalogo
 - raspar uma URL com Firecrawl
+- consultar a base vetorial do projeto
 
 Regra pratica:
 
@@ -76,6 +78,10 @@ OPENAI_BASE_URL=https://ollama.brainess.com.br/v1
 OPENAI_API_KEY=troque-este-token
 DEFAULT_MODEL=qwen2.5:3b
 FIRECRAWL_API_KEY=
+EMBEDDING_MODEL=nomic-embed-text
+CHROMA_DIR=./vector_store/chroma
+CHROMA_COLLECTION=knowledge_base
+KNOWLEDGE_DIR=./data/knowledge
 ```
 
 ## Dependencias para agentes
@@ -112,6 +118,7 @@ api_ollama_local/
   workflows/
   prompts/
   data/
+  rag/
   examples/
   app.py
   config.py
@@ -150,7 +157,7 @@ Resposta:
 ```json
 {
   "ok": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "model": "qwen2.5:3b"
 }
 ```
@@ -290,11 +297,11 @@ Nao versione:
 - logs
 - bases grandes geradas em runtime
 
-O diretório `vector_store/` fica no `.gitignore` porque e gerado pela ingestao do Chroma.
+O diretorio `vector_store/` fica no `.gitignore` porque e gerado pela ingestao do Chroma.
 
 ## Observacoes
 
 - `stream=true` ainda nao esta implementado.
 - `GET /v1/models` retorna o modelo padrao configurado no `.env`.
 - O token e validado via header `Authorization: Bearer ...`.
-- o RAG usa `EMBEDDING_MODEL` para gerar embeddings via Ollama
+- O RAG usa `EMBEDDING_MODEL` para gerar embeddings via Ollama.

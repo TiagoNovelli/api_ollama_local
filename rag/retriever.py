@@ -43,15 +43,31 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
         json={"model": settings.embedding_model, "input": texts},
         timeout=180,
     )
-    response.raise_for_status()
-    payload = response.json()
-    embeddings = payload.get("embeddings")
-    if embeddings:
-        return embeddings
-    embedding = payload.get("embedding")
-    if embedding:
-        return [embedding]
-    raise RuntimeError("No embeddings returned by Ollama.")
+    if response.status_code != 404:
+        response.raise_for_status()
+        payload = response.json()
+        embeddings = payload.get("embeddings")
+        if embeddings:
+            return embeddings
+        embedding = payload.get("embedding")
+        if embedding:
+            return [embedding]
+
+    # Compatibility path for older Ollama versions.
+    embeddings: list[list[float]] = []
+    for text in texts:
+        legacy_response = requests.post(
+            f"{settings.ollama_url}/api/embeddings",
+            json={"model": settings.embedding_model, "prompt": text},
+            timeout=180,
+        )
+        legacy_response.raise_for_status()
+        payload = legacy_response.json()
+        embedding = payload.get("embedding")
+        if not embedding:
+            raise RuntimeError("No embeddings returned by Ollama.")
+        embeddings.append(embedding)
+    return embeddings
 
 
 def _load_source_documents() -> list[dict[str, str]]:
