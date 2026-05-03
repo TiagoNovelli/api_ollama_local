@@ -1,20 +1,180 @@
 # API Ollama Local
 
-Camada simples em `FastAPI` para expor um servidor `Ollama` local com compatibilidade basica com a API da OpenAI.
+Camada em `FastAPI` para expor um servidor `Ollama` local com:
 
-Este repositorio tambem inclui uma estrutura inicial para:
-
+- compatibilidade basica com a API da OpenAI
 - agentes com `LangChain`
 - workflows com `LangGraph`
 - skills reutilizaveis
-- scraping e search com `Firecrawl`
-- RAG com `ChromaDB`
+- RAG local com `ChromaDB`
+- opcao de scraping e search com `Firecrawl`
+
+Este projeto foi pensado para ser versionado no Git e crescer junto com a sua stack de agentes.
 
 ## Versao
 
 `1.1.0`
 
-## Recursos
+## Visao geral
+
+Este repositorio separa responsabilidades em camadas:
+
+- `FastAPI`: expoe endpoints HTTP
+- `Ollama`: executa o modelo local
+- `LangChain`: organiza agentes, prompts e chamadas ao modelo
+- `LangGraph`: orquestra fluxos com mais controle
+- `skills/`: pequenas capacidades reutilizaveis
+- `rag/`: ingestao e busca vetorial
+
+Em resumo:
+
+- o cliente chama a API
+- a API decide qual fluxo usar
+- um endpoint simples chama o Ollama quase direto
+- um endpoint de agente pode consultar skills e RAG antes de responder
+
+## O que sao agentes e skills
+
+### Agentes
+
+Agentes sao componentes que recebem um objetivo e decidem como responder usando modelo, contexto e ferramentas.
+
+Exemplos:
+
+- entender uma pergunta do usuario
+- consultar uma base vetorial antes de responder
+- combinar contexto recuperado com o modelo
+- escolher qual skill usar
+
+### Skills
+
+Skills sao funcoes ou ferramentas pequenas e reutilizaveis que um agente pode chamar.
+
+Exemplos:
+
+- verificar a saude da API
+- buscar dados no catalogo
+- consultar a base vetorial
+- raspar uma pagina com Firecrawl
+
+Regra pratica:
+
+- agente decide
+- skill executa
+
+## Fluxo da arquitetura
+
+```mermaid
+flowchart TD
+    A["Cliente / App / Script Python"] --> B["FastAPI"]
+
+    B --> C["/v1/chat/completions"]
+    B --> D["/agents/rag-support"]
+
+    C --> E["Adapter OpenAI-compatible"]
+    E --> F["Ollama API local"]
+    F --> G["Modelo local"]
+
+    D --> H["Agente LangChain"]
+    H --> I["Skills"]
+    H --> J["Retriever RAG"]
+    J --> K["ChromaDB"]
+    J --> L["Embeddings via Ollama"]
+    H --> M["Prompt final"]
+    M --> F
+
+    I --> N["Catalogo / API / Firecrawl"]
+```
+
+## Como pensar nos fluxos
+
+### Fluxo simples
+
+Use quando voce quer so uma resposta do modelo:
+
+- cliente chama `/v1/chat/completions`
+- a API traduz para o formato esperado pelo Ollama
+- o Ollama responde
+- a API devolve em formato compativel com OpenAI
+
+### Fluxo com agente
+
+Use quando voce quer decisao ou contexto extra:
+
+- cliente chama `/agents/rag-support`
+- a API aciona um agente
+- o agente consulta o retriever
+- o retriever busca chunks no `ChromaDB`
+- o agente monta o prompt com contexto
+- o Ollama gera a resposta final
+
+## Estrutura do projeto
+
+```text
+api_ollama_local/
+  agents/
+  skills/
+  workflows/
+  prompts/
+  data/
+  rag/
+  examples/
+  app.py
+  config.py
+  requirements.txt
+  .env.example
+  VERSION
+```
+
+## Diretorios principais
+
+### `agents/`
+
+Agentes prontos para uso.
+
+Exemplos:
+
+- `support_agent.py`
+- `rag_support_agent.py`
+- `research_agent.py`
+
+### `skills/`
+
+Funcoes pequenas e reutilizaveis.
+
+Exemplos:
+
+- `api_health.py`
+- `catalog_search.py`
+- `rag_search.py`
+- `firecrawl_tools.py`
+
+### `workflows/`
+
+Fluxos mais controlados com `LangGraph`.
+
+### `prompts/`
+
+Prompts versionados para agentes e fluxos.
+
+### `rag/`
+
+Camada de ingestao e recuperacao vetorial.
+
+Arquivos principais:
+
+- `ingest.py`
+- `retriever.py`
+
+### `data/`
+
+Dados pequenos de exemplo, fixtures e base inicial para conhecimento.
+
+### `examples/`
+
+Scripts rapidos para testar o projeto.
+
+## Endpoints atuais
 
 - `GET /health`
 - `GET /version`
@@ -22,42 +182,38 @@ Este repositorio tambem inclui uma estrutura inicial para:
 - `POST /chat`
 - `POST /v1/chat/completions`
 - `POST /agents/rag-support`
-- exemplos de agentes e skills versionaveis
-- exemplos de workflow com LangGraph
-- ingestao local de documentos para RAG
 
-## Requisitos
+## Quando usar cada endpoint
 
-- Python 3.10+
-- Ollama rodando localmente
+### `POST /chat`
 
-## O que sao agentes e skills
+Endpoint simples e direto para usar o Ollama por prompt.
 
-### Agentes
+Use quando:
 
-Agentes sao componentes que usam um modelo, contexto e ferramentas para decidir o proximo passo.
+- voce quer algo rapido
+- nao precisa do formato OpenAI
+- nao precisa de agente
 
-Exemplos:
+### `POST /v1/chat/completions`
 
-- entender uma pergunta
-- decidir se precisa consultar uma ferramenta
-- combinar resposta do modelo com dados externos
+Endpoint compativel com clientes OpenAI.
 
-### Skills
+Use quando:
 
-Skills sao capacidades pequenas e reutilizaveis que um agente pode chamar.
+- quer integrar SDK oficial `openai`
+- quer integrar bibliotecas que esperam padrao OpenAI
+- quer manter um formato familiar de `messages`
 
-Exemplos:
+### `POST /agents/rag-support`
 
-- verificar a saude da API
-- buscar um item no catalogo
-- raspar uma URL com Firecrawl
-- consultar a base vetorial do projeto
+Endpoint com agente e RAG.
 
-Regra pratica:
+Use quando:
 
-- agente decide
-- skill executa
+- quer responder com base em documentos locais
+- quer contexto recuperado antes da geracao
+- quer um fluxo mais inteligente que uma chamada simples ao modelo
 
 ## Instalacao
 
@@ -67,6 +223,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
+
+## Configuracao
 
 Edite o `.env`:
 
@@ -84,16 +242,17 @@ CHROMA_COLLECTION=knowledge_base
 KNOWLEDGE_DIR=./data/knowledge
 ```
 
-## Dependencias para agentes
+## Dependencias principais
 
-Este projeto inclui dependencias para:
-
+- `fastapi`
+- `uvicorn`
+- `requests`
 - `openai`
 - `langchain`
 - `langchain-openai`
 - `langgraph`
-- `firecrawl-py`
 - `chromadb`
+- `firecrawl-py`
 
 ## Executando localmente
 
@@ -103,56 +262,21 @@ uvicorn app:app --host 127.0.0.1 --port 8000
 
 ## URL publica atual
 
-Se a API estiver publicada pelo seu tunel/proxy, a URL publica usada hoje e:
+Se a API estiver publicada pelo seu tunel/proxy:
 
 ```text
 https://ollama.brainess.com.br
 ```
 
-## Estrutura do projeto
-
-```text
-api_ollama_local/
-  agents/
-  skills/
-  workflows/
-  prompts/
-  data/
-  rag/
-  examples/
-  app.py
-  config.py
-  requirements.txt
-  .env.example
-```
-
-## Diretorios importantes
-
-- `agents/`: agentes prontos e documentados
-- `skills/`: ferramentas reutilizaveis
-- `workflows/`: fluxos com LangGraph
-- `prompts/`: prompts versionados
-- `data/`: catalogo e fixtures pequenas
-- `examples/`: exemplos rapidos para testar
-- `rag/`: ingestao e recuperacao vetorial
-
-## Endpoints
+## Exemplos de uso
 
 ### Health
-
-Local:
-
-```bash
-curl http://127.0.0.1:8000/health
-```
-
-Publico:
 
 ```bash
 curl https://ollama.brainess.com.br/health
 ```
 
-Resposta:
+Resposta esperada:
 
 ```json
 {
@@ -164,38 +288,12 @@ Resposta:
 
 ### Models
 
-Local:
-
-```bash
-curl http://127.0.0.1:8000/v1/models \
-  -H "Authorization: Bearer SEU_TOKEN"
-```
-
-Publico:
-
 ```bash
 curl https://ollama.brainess.com.br/v1/models \
   -H "Authorization: Bearer SEU_TOKEN"
 ```
 
-### Chat Completions
-
-Local:
-
-```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen2.5:3b",
-    "messages": [
-      {"role": "user", "content": "Diga oi em uma frase"}
-    ],
-    "stream": false
-  }'
-```
-
-Publico:
+### Chat completions
 
 ```bash
 curl https://ollama.brainess.com.br/v1/chat/completions \
@@ -210,27 +308,15 @@ curl https://ollama.brainess.com.br/v1/chat/completions \
   }'
 ```
 
-### RAG Support
+### Agente com RAG
 
-Antes de usar, faca a ingestao da base:
+Antes da primeira consulta, faca a ingestao da base:
 
 ```bash
 python -m examples.ingest_knowledge
 ```
 
-Local:
-
-```bash
-curl http://127.0.0.1:8000/agents/rag-support \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "Quais sofas existem no catalogo de exemplo?",
-    "top_k": 3
-  }'
-```
-
-Publico:
+Depois:
 
 ```bash
 curl https://ollama.brainess.com.br/agents/rag-support \
@@ -242,7 +328,7 @@ curl https://ollama.brainess.com.br/agents/rag-support \
   }'
 ```
 
-## Uso em Python
+## Uso em Python com SDK OpenAI
 
 ```python
 from openai import OpenAI
@@ -260,9 +346,9 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-## Exemplos de agentes e workflows
+## Scripts uteis
 
-Rode a partir da raiz do repositorio:
+Rode a partir da raiz do projeto:
 
 ```bash
 python -m examples.use_openai_sdk
@@ -272,36 +358,37 @@ python -m agents.rag_support_agent
 python -m workflows.support_graph
 ```
 
-Se voce tiver `FIRECRAWL_API_KEY` configurada:
+Se voce tiver `FIRECRAWL_API_KEY`:
 
 ```bash
 python -m agents.research_agent
 ```
 
-## Como versionar bem agentes e skills
+## Como versionar agentes, prompts e skills
 
-Versione no Git:
+Vale a pena versionar:
 
 - codigo Python
 - prompts
 - schemas
-- catalogos pequenos
 - exemplos
-- testes
+- dados pequenos
+- configuracoes de exemplo
 
-Nao versione:
+Evite versionar:
 
 - `.env`
 - segredos
-- caches
 - logs
-- bases grandes geradas em runtime
+- caches
+- bases vetoriais geradas em runtime
 
-O diretorio `vector_store/` fica no `.gitignore` porque e gerado pela ingestao do Chroma.
+O diretorio `vector_store/` fica no `.gitignore` porque e criado pela ingestao do `ChromaDB`.
 
 ## Observacoes
 
-- `stream=true` ainda nao esta implementado.
-- `GET /v1/models` retorna o modelo padrao configurado no `.env`.
-- O token e validado via header `Authorization: Bearer ...`.
-- O RAG usa `EMBEDDING_MODEL` para gerar embeddings via Ollama.
+- `stream=true` ainda nao esta implementado em `/v1/chat/completions`
+- `GET /v1/models` retorna o modelo padrao configurado no `.env`
+- o token e validado via header `Authorization: Bearer ...`
+- o endpoint de RAG depende de ingestao previa
+- os embeddings sao gerados pelo modelo definido em `EMBEDDING_MODEL`
